@@ -8,7 +8,7 @@
 ### Health check
 GET {{baseUrl}}/health
 
-### Public feedback submission
+### Public feedback submission with Gemini analysis
 POST {{baseUrl}}/api/feedback
 Content-Type: {{contentType}}
 
@@ -29,7 +29,7 @@ Content-Type: {{contentType}}
   "password": "{{adminPassword}}"
 }
 
-### Get all feedback (admin only)
+### Get all feedback and confirm ai_* fields were saved
 GET {{baseUrl}}/api/feedback
 Authorization: Bearer {{token}}
 

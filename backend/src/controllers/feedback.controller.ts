@@ -7,6 +7,7 @@ import {
   feedbackCategoryValues,
   feedbackStatusValues,
 } from "../models/feedback.model";
+import { analyzeFeedbackWithGemini } from "../services/gemini.service";
 
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedStatuses = new Set<string>(feedbackStatusValues);
@@ -66,6 +67,21 @@ async function createFeedback(request: Request, response: Response) {
       submitterName,
       submitterEmail,
     });
+
+    try {
+      const analysis = await analyzeFeedbackWithGemini(title, description);
+
+      feedback.ai_category = analysis.category;
+      feedback.ai_sentiment = analysis.sentiment;
+      feedback.ai_priority = analysis.priority_score;
+      feedback.ai_summary = analysis.summary;
+      feedback.ai_tags = analysis.tags;
+      feedback.ai_processed = true;
+
+      await feedback.save();
+    } catch (aiError) {
+      console.error("Gemini analysis failed.", aiError);
+    }
 
     return response.status(201).json({
       success: true,
