@@ -1,78 +1,64 @@
-# FeedPulse Product Feedback System
+﻿# FeedPulse Product Feedback System
 
-FeedPulse is a full-stack product feedback management system.
+FeedPulse is a full-stack product feedback platform built for the Software Engineer Intern assignment.
 
-The goal of this project is to let users submit product feedback through a public form, store that feedback in MongoDB, analyze it with Google Gemini AI, and give admins a dashboard to review, filter, and manage submissions.
+Users can submit feedback through a public form, the backend stores it in MongoDB, Gemini analyzes it automatically, and admins can review everything from a protected dashboard.
 
-## Project Goal
+## What Is Built
 
-This project is designed to show:
+### Public experience
 
-- frontend development with a clean feedback submission flow
-- backend API design with Express
-- database modeling with MongoDB and Mongoose
-- AI integration using Google Gemini
-- product thinking through prioritization, filtering, and admin workflows
+- Public feedback form with client-side validation
+- Title, description, category, name, and email fields
+- Description character counter
+- Success and error states after submission
+- Submissions sent to the backend API
 
-## Core Features
+### Backend API
 
-- Public feedback submission form
-- Validation for required fields
-- Store feedback in MongoDB
-- AI analysis for category, sentiment, priority, summary, and tags
-- Admin login and protected dashboard
-- Feedback filtering by category and status
-- Status updates for each feedback item
-- REST API for frontend and admin operations
+- Express + TypeScript backend
+- MongoDB + Mongoose connection
+- Feedback schema with validation and indexes
+- `POST /api/feedback`
+- `GET /api/feedback`
+- `GET /api/feedback/:id`
+- `PATCH /api/feedback/:id`
+- `DELETE /api/feedback/:id`
+- `GET /api/feedback/summary`
+- `POST /api/feedback/:id/reanalyze`
+- `POST /api/auth/login`
 
-## Suggested Tech Stack
+### AI features
 
-- Frontend: Next.js
-- Backend: Node.js + Express
+- Gemini analysis on feedback submission
+- AI category, sentiment, priority, summary, and tags saved to MongoDB
+- Graceful fallback when Gemini fails
+- 7-day summary endpoint for recent feedback themes
+- Manual AI re-trigger for any feedback item
+
+### Admin experience
+
+- Admin login page
+- Protected dashboard using JWT token stored in local storage
+- Feedback list with pagination
+- Search by title and AI summary
+- Filter by category and status
+- Sort by date, priority, sentiment, or title
+- Inline status update
+- Inline AI re-analysis
+- Real delete action from dashboard
+- Better loading and empty states
+
+## Tech Stack
+
+- Frontend: Next.js 15 + React 19 + TypeScript
+- Backend: Node.js + Express + TypeScript
 - Database: MongoDB + Mongoose
-- AI: Google Gemini API
-- Language: TypeScript preferred
-- Styling: Tailwind CSS or another CSS framework
+- AI: Google Gemini via `@google/genai`
+- Auth: JWT
+- Testing: Jest + ts-jest
 
-## High-Level Architecture
-
-1. A user submits feedback from the public page.
-2. The frontend sends the data to the backend API.
-3. The backend validates and saves the feedback in MongoDB.
-4. The backend sends the feedback text to Gemini for AI analysis.
-5. Gemini returns structured analysis data.
-6. The backend saves the AI results on the feedback record.
-7. The admin dashboard displays feedback, sentiment, priority, and status.
-
-## Main Data To Store
-
-Each feedback item should include:
-
-- title
-- description
-- category
-- status
-- submitter name
-- submitter email
-- AI category
-- AI sentiment
-- AI priority
-- AI summary
-- AI tags
-- createdAt
-- updatedAt
-
-## Required API Endpoints
-
-- `POST /api/feedback` - submit new feedback
-- `GET /api/feedback` - get all feedback
-- `GET /api/feedback/:id` - get one feedback item
-- `PATCH /api/feedback/:id` - update feedback status
-- `DELETE /api/feedback/:id` - delete feedback
-- `GET /api/feedback/summary` - get AI summary or trends
-- `POST /api/auth/login` - admin login
-
-## Starter Folder Structure
+## Project Structure
 
 ```text
 feedpulse-product-feedback-system/
@@ -80,10 +66,10 @@ feedpulse-product-feedback-system/
 │   ├── app/
 │   │   ├── dashboard/
 │   │   ├── login/
+│   │   ├── globals.css
+│   │   ├── layout.tsx
 │   │   └── page.tsx
-│   ├── components/
 │   ├── lib/
-│   ├── public/
 │   ├── package.json
 │   └── .env.local.example
 ├── backend/
@@ -94,68 +80,29 @@ feedpulse-product-feedback-system/
 │   │   ├── models/
 │   │   ├── routes/
 │   │   ├── services/
-│   │   ├── app.ts
-│   │   └── server.ts
+│   │   └── tests/
+│   ├── feedback.http
 │   ├── package.json
 │   └── .env.example
+├── docs/
+│   └── screenshots/
 ├── README.md
-├── .gitignore
-└── LICENSE
+└── .gitignore
 ```
 
-## Exact Local Setup Steps
+## Screenshots
 
-These steps are written for a complete beginner.
+### Public feedback form
 
-### 1. Install the software you need
+![Public feedback form](docs/screenshots/public-feedback-form.png)
 
-Install these before writing code:
+### Admin login page
 
-- Node.js 20 LTS from [nodejs.org](https://nodejs.org/)
-- Git from [git-scm.com](https://git-scm.com/)
-- VS Code from [code.visualstudio.com](https://code.visualstudio.com/)
+![Admin login page](docs/screenshots/admin-login-page.png)
 
-You also need accounts for:
+## Environment Variables
 
-- Google AI Studio for a Gemini API key
-- MongoDB Atlas for a free cloud database
-- GitHub for pushing your repository
-
-### 2. Check that Node and Git are installed
-
-Open PowerShell and run:
-
-```powershell
-node -v
-npm -v
-git --version
-```
-
-If you see version numbers, the tools are installed correctly.
-
-### 3. Open the project folder
-
-```powershell
-cd F:\GITHUB\feedpulse-product-feedback-system
-```
-
-### 4. Create your environment variable files
-
-Backend environment file:
-
-```powershell
-Copy-Item backend\.env.example backend\.env
-```
-
-Frontend environment file:
-
-```powershell
-Copy-Item frontend\.env.local.example frontend\.env.local
-```
-
-### 5. Fill the backend environment variables
-
-Open `backend/.env` and add your real values:
+### Backend: `backend/.env`
 
 ```env
 PORT=4000
@@ -167,83 +114,150 @@ ADMIN_PASSWORD=admin123
 CLIENT_URL=http://localhost:3000
 ```
 
-### 6. Fill the frontend environment variables
-
-Open `frontend/.env.local` and add:
+### Frontend: `frontend/.env.local`
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
-### 7. Get your MongoDB connection string
+## How To Run Locally
 
-1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a free cluster
-3. Create a database user
-4. Allow your current IP address
-5. Click `Connect`
-6. Choose `Drivers`
-7. Copy the connection string
-8. Paste it into `backend/.env` as `MONGO_URI`
+### 1. Clone and open the project
 
-### 8. Get your Gemini API key
+```powershell
+git clone <your-repo-url>
+cd F:\GITHUB\feedpulse-product-feedback-system
+```
 
-1. Go to [Google AI Studio](https://aistudio.google.com)
-2. Sign in
-3. Create API key
-4. Copy the key
-5. Paste it into `backend/.env` as `GEMINI_API_KEY`
+### 2. Create env files
 
-### 9. Install backend dependencies
+```powershell
+Copy-Item backend\.env.example backend\.env
+Copy-Item frontend\.env.local.example frontend\.env.local
+```
 
-When the backend code is ready, run:
+Then fill in the real values.
+
+### 3. Install backend dependencies
 
 ```powershell
 cd backend
 npm install
 ```
 
-### 10. Install frontend dependencies
+### 4. Install frontend dependencies
 
-In a new PowerShell window:
+Open a second terminal:
 
 ```powershell
 cd F:\GITHUB\feedpulse-product-feedback-system\frontend
 npm install
 ```
 
-### 11. Start the backend
+### 5. Start backend
 
 ```powershell
 cd F:\GITHUB\feedpulse-product-feedback-system\backend
 npm run dev
 ```
 
-Expected result:
+Expected:
 
-- backend starts on `http://localhost:4000`
+- backend runs on `http://localhost:4000`
 - MongoDB connects successfully
 
-### 12. Start the frontend
+### 6. Start frontend
 
-Open another terminal:
+In another terminal:
 
 ```powershell
 cd F:\GITHUB\feedpulse-product-feedback-system\frontend
 npm run dev
 ```
 
-Expected result:
+Expected:
 
-- frontend starts on `http://localhost:3000`
+- frontend runs on `http://localhost:3000`
 
-### 13. Test the full app locally
+### 7. Open the app
 
-Check:
+- Public form: [http://localhost:3000](http://localhost:3000)
+- Admin login: [http://localhost:3000/login](http://localhost:3000/login)
+- Dashboard: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
 
-- the form loads on the public page
-- form validation works
-- feedback is saved in MongoDB
-- Gemini analysis runs
-- admin can log in
-- dashboard loads feedback correctly
+## Admin Login
+
+Use the credentials from `backend/.env`.
+
+Example:
+
+```env
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin123
+```
+
+## Backend Testing
+
+### Manual API checks
+
+Use:
+
+[backend/feedback.http](backend/feedback.http)
+
+It includes requests for:
+
+- public feedback submission
+- admin login
+- summary endpoint
+- list endpoint
+- single item fetch
+- reanalyze endpoint
+- status update
+- delete
+
+### Automated tests
+
+Run:
+
+```powershell
+cd F:\GITHUB\feedpulse-product-feedback-system\backend
+npm test
+```
+
+Current test coverage includes:
+
+- Gemini service helper normalization
+- JWT auth middleware unauthorized case
+- feedback controller validation
+- paginated feedback list behavior
+
+## Current Status
+
+Implemented well:
+
+- backend CRUD
+- Gemini integration
+- summary + reanalyze endpoints
+- admin auth middleware
+- public form
+- admin login page
+- protected dashboard
+- backend tests
+
+Still good next steps if more time is available:
+
+- dashboard screenshots
+- stronger token persistence strategy
+- backend integration tests with mocked DB/API layers
+- deploy frontend and backend
+- Docker setup
+
+## What I Would Build Next
+
+If I had more time, I would add:
+
+- dashboard charts and aggregate metrics
+- rate limiting on public submissions
+- integration tests for API endpoints
+- deployment to Vercel + Render
+- Docker Compose for one-command local startup

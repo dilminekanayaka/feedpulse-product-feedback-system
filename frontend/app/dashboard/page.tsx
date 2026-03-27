@@ -174,10 +174,16 @@ export default function DashboardPage() {
     void loadSummary();
   }, [token]);
 
-  const openCount = useMemo(() => feedback.filter((item) => item.status !== "Resolved").length, [feedback]);
+  const openCount = useMemo(
+    () => feedback.filter((item) => item.status !== "Resolved").length,
+    [feedback],
+  );
 
   const averagePriority = useMemo(() => {
-    const values = feedback.map((item) => item.ai_priority).filter((value): value is number => typeof value === "number");
+    const values = feedback
+      .map((item) => item.ai_priority)
+      .filter((value): value is number => typeof value === "number");
+
     if (values.length === 0) return "-";
     return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1);
   }, [feedback]);
@@ -189,6 +195,7 @@ export default function DashboardPage() {
 
   async function handleStatusUpdate(id: string, nextStatus: string) {
     if (!token) return;
+
     setUpdatingId(id);
     setActionMessage("");
     setErrorMessage("");
@@ -203,7 +210,12 @@ export default function DashboardPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
 
-      const result = (await response.json()) as { success: boolean; message: string; data?: FeedbackItem };
+      const result = (await response.json()) as {
+        success: boolean;
+        message: string;
+        data?: FeedbackItem;
+      };
+
       if (!response.ok || !result.success || !result.data) {
         throw new Error(result.message || "Unable to update status.");
       }
@@ -219,6 +231,7 @@ export default function DashboardPage() {
 
   async function handleReanalyze(id: string) {
     if (!token) return;
+
     setUpdatingId(id);
     setActionMessage("");
     setErrorMessage("");
@@ -229,7 +242,12 @@ export default function DashboardPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const result = (await response.json()) as { success: boolean; message: string; data?: FeedbackItem };
+      const result = (await response.json()) as {
+        success: boolean;
+        message: string;
+        data?: FeedbackItem;
+      };
+
       if (!response.ok || !result.success || !result.data) {
         throw new Error(result.message || "Unable to re-run AI analysis.");
       }
@@ -243,6 +261,46 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleDelete(id: string) {
+    if (!token) return;
+
+    const shouldDelete = window.confirm(
+      "Delete this feedback item? This action cannot be undone.",
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setUpdatingId(id);
+    setActionMessage("");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/feedback/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const result = (await response.json()) as {
+        success: boolean;
+        message: string;
+      };
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Unable to delete feedback.");
+      }
+
+      setFeedback((current) => current.filter((item) => item._id !== id));
+      setTotal((current) => Math.max(0, current - 1));
+      setActionMessage("Feedback deleted successfully.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to delete feedback.");
+    } finally {
+      setUpdatingId("");
+    }
+  }
+
   return (
     <main className="page-shell">
       <div className="dashboard-shell">
@@ -251,43 +309,257 @@ export default function DashboardPage() {
             <span className="hero-kicker">Admin Dashboard</span>
             <h1 className="dashboard-title">Review feedback, trends, and AI insights.</h1>
             <p className="dashboard-text">
-              Signed in as <strong>{adminEmail || "admin"}</strong>. Search the incoming queue, re-run AI analysis, and move feedback through the review flow.
+              Signed in as <strong>{adminEmail || "admin"}</strong>. Search the incoming queue,
+              re-run AI analysis, and move feedback through the review flow.
             </p>
           </div>
           <div className="dashboard-header-actions">
-            <Link href="/" className="subtle-link">Open public form</Link>
-            <button type="button" className="secondary-button" onClick={handleLogout}>Log out</button>
+            <Link href="/" className="subtle-link">
+              Open public form
+            </Link>
+            <button type="button" className="secondary-button" onClick={handleLogout}>
+              Log out
+            </button>
           </div>
         </section>
 
         <section className="stats-grid">
-          <article className="stat-card"><span className="stat-label">Visible feedback</span><strong className="stat-value">{total}</strong></article>
-          <article className="stat-card"><span className="stat-label">Open items on this page</span><strong className="stat-value">{openCount}</strong></article>
-          <article className="stat-card"><span className="stat-label">Average AI priority</span><strong className="stat-value">{averagePriority}</strong></article>
+          <article className="stat-card">
+            <span className="stat-label">Visible feedback</span>
+            <strong className="stat-value">{total}</strong>
+          </article>
+          <article className="stat-card">
+            <span className="stat-label">Open items on this page</span>
+            <strong className="stat-value">{openCount}</strong>
+          </article>
+          <article className="stat-card">
+            <span className="stat-label">Average AI priority</span>
+            <strong className="stat-value">{averagePriority}</strong>
+          </article>
           <article className="stat-card stat-card-wide">
             <span className="stat-label">Last 7 days summary</span>
-            {isSummaryLoading ? <p className="stat-copy">Loading summary...</p> : summary ? <><p className="stat-copy">{summary.summary}</p><div className="tag-row">{summary.themes.map((theme) => <span key={theme} className="tag-chip">{theme}</span>)}</div></> : <p className="stat-copy">Summary unavailable right now.</p>}
+            {isSummaryLoading ? (
+              <div className="summary-skeleton-block">
+                <span className="skeleton-line" />
+                <span className="skeleton-line short" />
+                <div className="tag-row">
+                  <span className="skeleton-chip" />
+                  <span className="skeleton-chip" />
+                  <span className="skeleton-chip" />
+                </div>
+              </div>
+            ) : summary ? (
+              <>
+                <p className="stat-copy">{summary.summary}</p>
+                <div className="tag-row">
+                  {summary.themes.map((theme) => (
+                    <span key={theme} className="tag-chip">
+                      {theme}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="stat-copy">Summary unavailable right now.</p>
+            )}
           </article>
         </section>
 
         <section className="dashboard-panel">
           <div className="filters-grid">
-            <div className="field"><label htmlFor="search">Search</label><input id="search" value={searchInput} onChange={(event) => { setSearchInput(event.target.value); setPage(1); }} placeholder="Search title or AI summary" /></div>
-            <div className="field"><label htmlFor="category-filter">Category</label><select id="category-filter" value={category} onChange={(event) => { setCategory(event.target.value); setPage(1); }}>{categoryOptions.map((option) => <option key={option || "all"} value={option}>{option || "All categories"}</option>)}</select></div>
-            <div className="field"><label htmlFor="status-filter">Status</label><select id="status-filter" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>{statusOptions.map((option) => <option key={option || "all"} value={option}>{option || "All statuses"}</option>)}</select></div>
-            <div className="field"><label htmlFor="sort-by">Sort by</label><select id="sort-by" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
-            <div className="field"><label htmlFor="sort-order">Order</label><select id="sort-order" value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}><option value="desc">Descending</option><option value="asc">Ascending</option></select></div>
+            <div className="field">
+              <label htmlFor="search">Search</label>
+              <input
+                id="search"
+                value={searchInput}
+                onChange={(event) => {
+                  setSearchInput(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search title or AI summary"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="category-filter">Category</label>
+              <select
+                id="category-filter"
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value);
+                  setPage(1);
+                }}
+              >
+                {categoryOptions.map((option) => (
+                  <option key={option || "all"} value={option}>
+                    {option || "All categories"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="status-filter">Status</label>
+              <select
+                id="status-filter"
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value);
+                  setPage(1);
+                }}
+              >
+                {statusOptions.map((option) => (
+                  <option key={option || "all"} value={option}>
+                    {option || "All statuses"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="sort-by">Sort by</label>
+              <select id="sort-by" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="sort-order">Order</label>
+              <select
+                id="sort-order"
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value)}
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
           </div>
 
           {actionMessage ? <div className="status-banner success">{actionMessage}</div> : null}
           {errorMessage ? <div className="status-banner error">{errorMessage}</div> : null}
 
-          {isLoading ? <div className="dashboard-empty">Loading feedback...</div> : feedback.length === 0 ? <div className="dashboard-empty">No feedback matches the current filters.</div> : <div className="feedback-list">{feedback.map((item) => <article key={item._id} className="feedback-item-card"><div className="feedback-item-header"><div><h2>{item.title}</h2><p className="feedback-meta-line">{item.category} · {new Date(item.createdAt).toLocaleString()}</p></div><div className="feedback-badges"><span className="badge neutral">Status: {item.status}</span><span className={`badge ${(item.ai_sentiment || "neutral").toLowerCase()}`}>{item.ai_sentiment || "No sentiment"}</span><span className="badge priority">Priority: {item.ai_priority ?? "-"}</span></div></div><p className="feedback-description">{item.description}</p><div className="feedback-ai-panel"><strong>AI summary</strong><p>{item.ai_summary || "Gemini summary not available yet."}</p><div className="tag-row">{item.ai_tags.length > 0 ? item.ai_tags.map((tag) => <span key={tag} className="tag-chip">{tag}</span>) : <span className="tag-chip muted">No tags</span>}</div></div><div className="feedback-footer-row"><div className="feedback-contact"><span>{item.submitterName || "Anonymous"}</span><span>{item.submitterEmail || "No email provided"}</span></div><div className="feedback-actions"><select value={item.status} disabled={updatingId === item._id} onChange={(event) => void handleStatusUpdate(item._id, event.target.value)}><option value="New">New</option><option value="In Review">In Review</option><option value="Resolved">Resolved</option></select><button type="button" className="secondary-button" disabled={updatingId === item._id} onClick={() => void handleReanalyze(item._id)}>{updatingId === item._id ? "Working..." : "Re-run AI"}</button></div></div></article>)}</div>}
+          {isLoading ? (
+            <div className="feedback-list">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <article key={index} className="feedback-item-card skeleton-card">
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line short" />
+                  <span className="skeleton-block" />
+                  <div className="tag-row">
+                    <span className="skeleton-chip" />
+                    <span className="skeleton-chip" />
+                    <span className="skeleton-chip" />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : feedback.length === 0 ? (
+            <div className="dashboard-empty dashboard-empty-rich">
+              <strong>No feedback matches the current filters.</strong>
+              <span>Try clearing search, category, or status filters to widen the results.</span>
+            </div>
+          ) : (
+            <div className="feedback-list">
+              {feedback.map((item) => (
+                <article key={item._id} className="feedback-item-card">
+                  <div className="feedback-item-header">
+                    <div>
+                      <h2>{item.title}</h2>
+                      <p className="feedback-meta-line">
+                        {item.category} · {new Date(item.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="feedback-badges">
+                      <span className="badge neutral">Status: {item.status}</span>
+                      <span className={`badge ${(item.ai_sentiment || "neutral").toLowerCase()}`}>
+                        {item.ai_sentiment || "No sentiment"}
+                      </span>
+                      <span className="badge priority">Priority: {item.ai_priority ?? "-"}</span>
+                    </div>
+                  </div>
 
-          <div className="pagination-row"><span>Page {page} of {totalPages}</span><div className="pagination-actions"><button type="button" className="secondary-button" disabled={page <= 1 || isLoading} onClick={() => setPage((current) => current - 1)}>Previous</button><button type="button" className="secondary-button" disabled={page >= totalPages || isLoading} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>
+                  <p className="feedback-description">{item.description}</p>
+
+                  <div className="feedback-ai-panel">
+                    <strong>AI summary</strong>
+                    <p>{item.ai_summary || "Gemini summary not available yet."}</p>
+                    <div className="tag-row">
+                      {item.ai_tags.length > 0 ? (
+                        item.ai_tags.map((tag) => (
+                          <span key={tag} className="tag-chip">
+                            {tag}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="tag-chip muted">No tags</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="feedback-footer-row">
+                    <div className="feedback-contact">
+                      <span>{item.submitterName || "Anonymous"}</span>
+                      <span>{item.submitterEmail || "No email provided"}</span>
+                    </div>
+                    <div className="feedback-actions">
+                      <select
+                        value={item.status}
+                        disabled={updatingId === item._id}
+                        onChange={(event) => void handleStatusUpdate(item._id, event.target.value)}
+                      >
+                        <option value="New">New</option>
+                        <option value="In Review">In Review</option>
+                        <option value="Resolved">Resolved</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={updatingId === item._id}
+                        onClick={() => void handleReanalyze(item._id)}
+                      >
+                        {updatingId === item._id ? "Working..." : "Re-run AI"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button danger-button"
+                        disabled={updatingId === item._id}
+                        onClick={() => void handleDelete(item._id)}
+                      >
+                        {updatingId === item._id ? "Working..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <div className="pagination-row">
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <div className="pagination-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={page <= 1 || isLoading}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={page >= totalPages || isLoading}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </section>
       </div>
     </main>
   );
 }
-
