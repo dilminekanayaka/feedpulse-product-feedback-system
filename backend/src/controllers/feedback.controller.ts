@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongoose";
+import { FilterQuery, isValidObjectId } from "mongoose";
 import { Request, Response } from "express";
 
 import {
@@ -138,4 +138,46 @@ async function getFeedbackList(request: Request, response: Response) {
   }
 }
 
-export { createFeedback, getFeedbackList };
+async function getFeedbackById(request: Request, response: Response) {
+  try {
+    const { id } = request.params;
+
+    if (!isValidObjectId(id)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Feedback id is not valid.",
+      });
+    }
+
+    const feedback = await FeedbackModel.findById(id);
+
+    if (!feedback) {
+      return response.status(404).json({
+        success: false,
+        data: null,
+        error: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
+    }
+
+    return response.status(200).json({
+      success: true,
+      data: feedback,
+      error: null,
+      message: "Feedback fetched successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to fetch feedback by id.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while fetching the feedback item.",
+    });
+  }
+}
+
+export { createFeedback, getFeedbackById, getFeedbackList };
