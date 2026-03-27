@@ -1,8 +1,15 @@
+import { FilterQuery } from "mongoose";
 import { Request, Response } from "express";
 
-import { FeedbackModel, feedbackCategoryValues } from "../models/feedback.model";
+import {
+  Feedback,
+  FeedbackModel,
+  feedbackCategoryValues,
+  feedbackStatusValues,
+} from "../models/feedback.model";
 
 const allowedCategories = new Set<string>(feedbackCategoryValues);
+const allowedStatuses = new Set<string>(feedbackStatusValues);
 
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -78,4 +85,57 @@ async function createFeedback(request: Request, response: Response) {
   }
 }
 
-export { createFeedback };
+async function getFeedbackList(request: Request, response: Response) {
+  try {
+    const category = sanitizeText(request.query.category);
+    const status = sanitizeText(request.query.status);
+
+    if (category && !allowedCategories.has(category)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Category filter must be one of: Bug, Feature Request, Improvement, Other.",
+      });
+    }
+
+    if (status && !allowedStatuses.has(status)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Status filter must be one of: New, In Review, Resolved.",
+      });
+    }
+
+    const query: FilterQuery<Feedback> = {};
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    const feedback = await FeedbackModel.find(query).sort({ createdAt: -1 });
+
+    return response.status(200).json({
+      success: true,
+      data: feedback,
+      error: null,
+      message: "Feedback fetched successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to fetch feedback.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while fetching feedback.",
+    });
+  }
+}
+
+export { createFeedback, getFeedbackList };
