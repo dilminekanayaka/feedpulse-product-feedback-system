@@ -7,13 +7,30 @@ import {
   feedbackCategoryValues,
   feedbackStatusValues,
 } from "../models/feedback.model";
-import { analyzeFeedbackWithGemini } from "../services/gemini.service";
+import {
+  analyzeFeedbackWithGemini,
+  summarizeFeedbackThemesWithGemini,
+} from "../services/gemini.service";
 
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedStatuses = new Set<string>(feedbackStatusValues);
 
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+async function applyGeminiAnalysis(feedback: InstanceType<typeof FeedbackModel>) {
+  const analysis = await analyzeFeedbackWithGemini(feedback.title, feedback.description);
+
+  feedback.ai_category = analysis.category;
+  feedback.ai_sentiment = analysis.sentiment;
+  feedback.ai_priority = analysis.priority_score;
+  feedback.ai_summary = analysis.summary;
+  feedback.ai_tags = analysis.tags;
+  feedback.ai_processed = true;
+
+  await feedback.save();
+  return feedback;
 }
 
 async function createFeedback(request: Request, response: Response) {
@@ -69,16 +86,7 @@ async function createFeedback(request: Request, response: Response) {
     });
 
     try {
-      const analysis = await analyzeFeedbackWithGemini(title, description);
-
-      feedback.ai_category = analysis.category;
-      feedback.ai_sentiment = analysis.sentiment;
-      feedback.ai_priority = analysis.priority_score;
-      feedback.ai_summary = analysis.summary;
-      feedback.ai_tags = analysis.tags;
-      feedback.ai_processed = true;
-
-      await feedback.save();
+      await applyGeminiAnalysis(feedback);
     } catch (aiError) {
       console.error("Gemini analysis failed.", aiError);
     }
@@ -97,6 +105,59 @@ async function createFeedback(request: Request, response: Response) {
       data: null,
       error: "INTERNAL_SERVER_ERROR",
       message: "Something went wrong while saving feedback.",
+    });
+  }
+}
+
+async function getFeedbackSummary(request: Request, response: Response) {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentFeedback = await FeedbackModel.find({
+      createdAt: { $gte: sevenDaysAgo },
+    })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    if (recentFeedback.length === 0) {
+      return response.status(200).json({
+        success: true,
+        data: {
+          period_days: 7,
+          total_feedback: 0,
+          summary: "No feedback was submitted in the last 7 days.",
+          themes: [],
+        },
+        error: null,
+        message: "Feedback summary generated successfully.",
+      });
+    }
+
+    const entries = recentFeedback.map(
+      (item, index) =>
+        `${index + 1}. Title: ${item.title}\nDescription: ${item.description}\nCategory: ${item.category}\nStatus: ${item.status}`,
+    );
+
+    const summary = await summarizeFeedbackThemesWithGemini(entries);
+
+    return response.status(200).json({
+      success: true,
+      data: {
+        period_days: 7,
+        total_feedback: recentFeedback.length,
+        summary: summary.summary,
+        themes: summary.themes,
+      },
+      error: null,
+      message: "Feedback summary generated successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to generate feedback summary.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while generating feedback summary.",
     });
   }
 }
@@ -192,6 +253,50 @@ async function getFeedbackById(request: Request, response: Response) {
       data: null,
       error: "INTERNAL_SERVER_ERROR",
       message: "Something went wrong while fetching the feedback item.",
+    });
+  }
+}
+
+async function reanalyzeFeedback(request: Request, response: Response) {
+  try {
+    const { id } = request.params;
+
+    if (!isValidObjectId(id)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Feedback id is not valid.",
+      });
+    }
+
+    const feedback = await FeedbackModel.findById(id);
+
+    if (!feedback) {
+      return response.status(404).json({
+        success: false,
+        data: null,
+        error: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
+    }
+
+    const updatedFeedback = await applyGeminiAnalysis(feedback);
+
+    return response.status(200).json({
+      success: true,
+      data: updatedFeedback,
+      error: null,
+      message: "Feedback AI analysis re-triggered successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to reanalyze feedback.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while reanalyzing feedback.",
     });
   }
 }
@@ -308,5 +413,7 @@ export {
   deleteFeedback,
   getFeedbackById,
   getFeedbackList,
+  getFeedbackSummary,
+  reanalyzeFeedback,
   updateFeedbackStatus,
 };

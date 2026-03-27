@@ -18,6 +18,22 @@ type GeminiFeedbackAnalysis = {
   tags: string[];
 };
 
+type GeminiThemeSummary = {
+  summary: string;
+  themes: string[];
+};
+
+function extractJsonBlock(rawText: string) {
+  const trimmed = rawText.trim();
+
+  if (trimmed.startsWith("```")) {
+    const withoutFenceHeader = trimmed.replace(/^```(?:json)?\s*/i, "");
+    return withoutFenceHeader.replace(/\s*```$/, "").trim();
+  }
+
+  return trimmed;
+}
+
 function normalizeGeminiAnalysis(input: unknown): GeminiFeedbackAnalysis {
   if (!input || typeof input !== "object") {
     throw new Error("Gemini response is not a valid object.");
@@ -41,10 +57,27 @@ function normalizeGeminiAnalysis(input: unknown): GeminiFeedbackAnalysis {
     sentiment: allowedSentiments.has(sentiment) ? sentiment : "Neutral",
     priority_score:
       Number.isFinite(priorityScore) && priorityScore >= 1 && priorityScore <= 10
-        ? priorityScore
+        ? Math.round(priorityScore)
         : 5,
     summary,
     tags,
+  };
+}
+
+function normalizeThemeSummary(input: unknown): GeminiThemeSummary {
+  if (!input || typeof input !== "object") {
+    throw new Error("Gemini summary response is not a valid object.");
+  }
+
+  const candidate = input as Record<string, unknown>;
+  const summary = typeof candidate.summary === "string" ? candidate.summary.trim() : "";
+  const themes = Array.isArray(candidate.themes)
+    ? candidate.themes.filter((theme): theme is string => typeof theme === "string").map((theme) => theme.trim())
+    : [];
+
+  return {
+    summary,
+    themes,
   };
 }
 
@@ -74,9 +107,40 @@ async function analyzeFeedbackWithGemini(title: string, description: string) {
     throw new Error("Gemini returned an empty response.");
   }
 
-  const parsed = JSON.parse(rawText);
+  const parsed = JSON.parse(extractJsonBlock(rawText));
   return normalizeGeminiAnalysis(parsed);
 }
 
-export { analyzeFeedbackWithGemini };
-export type { GeminiFeedbackAnalysis };
+async function summarizeFeedbackThemesWithGemini(entries: string[]) {
+  const prompt = [
+    "Analyze the following recent product feedback entries and return ONLY valid JSON.",
+    'Use this exact schema: {"summary":"short paragraph","themes":["theme 1","theme 2","theme 3"]}',
+    "Rules:",
+    "- themes should contain exactly 3 concise themes when possible",
+    "- summary should describe the top trends from the last 7 days",
+    "Feedback entries:",
+    ...entries,
+  ].join("\n");
+
+  const response = await ai.models.generateContent({
+    model: geminiModel,
+    contents: prompt,
+  });
+
+  const rawText = response.text;
+
+  if (!rawText) {
+    throw new Error("Gemini returned an empty summary response.");
+  }
+
+  const parsed = JSON.parse(extractJsonBlock(rawText));
+  return normalizeThemeSummary(parsed);
+}
+
+export {
+  analyzeFeedbackWithGemini,
+  extractJsonBlock,
+  normalizeGeminiAnalysis,
+  summarizeFeedbackThemesWithGemini,
+};
+export type { GeminiFeedbackAnalysis, GeminiThemeSummary };

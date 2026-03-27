@@ -29,12 +29,20 @@ Content-Type: {{contentType}}
   "password": "{{adminPassword}}"
 }
 
+### Get feedback summary for last 7 days (admin only)
+GET {{baseUrl}}/api/feedback/summary
+Authorization: Bearer {{token}}
+
 ### Get all feedback and confirm ai_* fields were saved
 GET {{baseUrl}}/api/feedback
 Authorization: Bearer {{token}}
 
 ### Get one feedback item (admin only)
 GET {{baseUrl}}/api/feedback/{{feedbackId}}
+Authorization: Bearer {{token}}
+
+### Re-trigger AI analysis for one feedback item (admin only)
+POST {{baseUrl}}/api/feedback/{{feedbackId}}/reanalyze
 Authorization: Bearer {{token}}
 
 ### Update feedback status (admin only)
