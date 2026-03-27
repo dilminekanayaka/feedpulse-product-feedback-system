@@ -7,13 +7,14 @@ import {
   getFeedbackList,
   updateFeedbackStatus,
 } from "../controllers/feedback.controller";
+import { requireAdminAuth } from "../middleware/auth.middleware";
 
 const feedbackRouter = Router();
 
-feedbackRouter.get("/", getFeedbackList);
-feedbackRouter.get("/:id", getFeedbackById);
 feedbackRouter.post("/", createFeedback);
-feedbackRouter.patch("/:id", updateFeedbackStatus);
-feedbackRouter.delete("/:id", deleteFeedback);
+feedbackRouter.get("/", requireAdminAuth, getFeedbackList);
+feedbackRouter.get("/:id", requireAdminAuth, getFeedbackById);
+feedbackRouter.patch("/:id", requireAdminAuth, updateFeedbackStatus);
+feedbackRouter.delete("/:id", requireAdminAuth, deleteFeedback);
 
 export { feedbackRouter };

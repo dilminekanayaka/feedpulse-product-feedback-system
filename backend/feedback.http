@@ -1,0 +1,51 @@
+@baseUrl = http://localhost:4000
+@contentType = application/json
+@adminEmail = admin@example.com
+@adminPassword = admin123
+@token = paste_token_here
+@feedbackId = paste_feedback_id_here
+
+### Health check
+GET {{baseUrl}}/health
+
+### Public feedback submission
+POST {{baseUrl}}/api/feedback
+Content-Type: {{contentType}}
+
+{
+  "title": "Need dark mode for the dashboard",
+  "description": "The dashboard is too bright at night and a dark mode option would make it much easier to use.",
+  "category": "Feature Request",
+  "submitterName": "Test User",
+  "submitterEmail": "test@example.com"
+}
+
+### Admin login
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Get all feedback (admin only)
+GET {{baseUrl}}/api/feedback
+Authorization: Bearer {{token}}
+
+### Get one feedback item (admin only)
+GET {{baseUrl}}/api/feedback/{{feedbackId}}
+Authorization: Bearer {{token}}
+
+### Update feedback status (admin only)
+PATCH {{baseUrl}}/api/feedback/{{feedbackId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "status": "In Review"
+}
+
+### Delete feedback (admin only)
+DELETE {{baseUrl}}/api/feedback/{{feedbackId}}
+Authorization: Bearer {{token}}

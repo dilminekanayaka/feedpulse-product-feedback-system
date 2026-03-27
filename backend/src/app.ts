@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import { env } from "./config/env";
+import { authRouter } from "./routes/auth.routes";
 import { feedbackRouter } from "./routes/feedback.routes";
 import { healthRouter } from "./routes/health.routes";
 
@@ -23,6 +24,7 @@ app.get("/", (_request, response) => {
 });
 
 app.use("/health", healthRouter);
+app.use("/api/auth", authRouter);
 app.use("/api/feedback", feedbackRouter);
 
 export { app };
