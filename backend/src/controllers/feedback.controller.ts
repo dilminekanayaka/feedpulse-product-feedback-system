@@ -245,8 +245,51 @@ async function updateFeedbackStatus(request: Request, response: Response) {
   }
 }
 
+async function deleteFeedback(request: Request, response: Response) {
+  try {
+    const { id } = request.params;
+
+    if (!isValidObjectId(id)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Feedback id is not valid.",
+      });
+    }
+
+    const deletedFeedback = await FeedbackModel.findByIdAndDelete(id);
+
+    if (!deletedFeedback) {
+      return response.status(404).json({
+        success: false,
+        data: null,
+        error: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
+    }
+
+    return response.status(200).json({
+      success: true,
+      data: deletedFeedback,
+      error: null,
+      message: "Feedback deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to delete feedback.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while deleting feedback.",
+    });
+  }
+}
+
 export {
   createFeedback,
+  deleteFeedback,
   getFeedbackById,
   getFeedbackList,
   updateFeedbackStatus,

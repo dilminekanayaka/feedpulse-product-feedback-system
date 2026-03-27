@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   createFeedback,
+  deleteFeedback,
   getFeedbackById,
   getFeedbackList,
   updateFeedbackStatus,
@@ -13,5 +14,6 @@ feedbackRouter.get("/", getFeedbackList);
 feedbackRouter.get("/:id", getFeedbackById);
 feedbackRouter.post("/", createFeedback);
 feedbackRouter.patch("/:id", updateFeedbackStatus);
+feedbackRouter.delete("/:id", deleteFeedback);
 
 export { feedbackRouter };
