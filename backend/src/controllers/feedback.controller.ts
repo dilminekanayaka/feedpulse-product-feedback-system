@@ -180,4 +180,74 @@ async function getFeedbackById(request: Request, response: Response) {
   }
 }
 
-export { createFeedback, getFeedbackById, getFeedbackList };
+async function updateFeedbackStatus(request: Request, response: Response) {
+  try {
+    const { id } = request.params;
+    const status = sanitizeText(request.body.status);
+
+    if (!isValidObjectId(id)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Feedback id is not valid.",
+      });
+    }
+
+    if (!status) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Status is required.",
+      });
+    }
+
+    if (!allowedStatuses.has(status)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "Status must be one of: New, In Review, Resolved.",
+      });
+    }
+
+    const updatedFeedback = await FeedbackModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedFeedback) {
+      return response.status(404).json({
+        success: false,
+        data: null,
+        error: "NOT_FOUND",
+        message: "Feedback not found.",
+      });
+    }
+
+    return response.status(200).json({
+      success: true,
+      data: updatedFeedback,
+      error: null,
+      message: "Feedback status updated successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to update feedback status.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while updating feedback status.",
+    });
+  }
+}
+
+export {
+  createFeedback,
+  getFeedbackById,
+  getFeedbackList,
+  updateFeedbackStatus,
+};
