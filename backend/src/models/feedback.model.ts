@@ -90,6 +90,7 @@ const feedbackSchema = new Schema(
 
 feedbackSchema.index({ category: 1 });
 feedbackSchema.index({ createdAt: -1 });
+feedbackSchema.index({ title: "text", ai_summary: "text" });
 
 type Feedback = InferSchemaType<typeof feedbackSchema>;
 

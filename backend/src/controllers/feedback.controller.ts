@@ -14,9 +14,16 @@ import {
 
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedStatuses = new Set<string>(feedbackStatusValues);
+const allowedSortFields = new Set(["createdAt", "ai_priority", "ai_sentiment", "title"]);
+const allowedSortOrders = new Set(["asc", "desc"]);
 
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function parsePositiveInteger(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 async function applyGeminiAnalysis(feedback: InstanceType<typeof FeedbackModel>) {
@@ -166,6 +173,11 @@ async function getFeedbackList(request: Request, response: Response) {
   try {
     const category = sanitizeText(request.query.category);
     const status = sanitizeText(request.query.status);
+    const search = sanitizeText(request.query.search);
+    const sortBy = sanitizeText(request.query.sortBy) || "createdAt";
+    const sortOrder = sanitizeText(request.query.sortOrder) || "desc";
+    const page = parsePositiveInteger(request.query.page, 1);
+    const limit = Math.min(parsePositiveInteger(request.query.limit, 10), 50);
 
     if (category && !allowedCategories.has(category)) {
       return response.status(400).json({
@@ -185,6 +197,24 @@ async function getFeedbackList(request: Request, response: Response) {
       });
     }
 
+    if (!allowedSortFields.has(sortBy)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "sortBy must be one of: createdAt, ai_priority, ai_sentiment, title.",
+      });
+    }
+
+    if (!allowedSortOrders.has(sortOrder)) {
+      return response.status(400).json({
+        success: false,
+        data: null,
+        error: "VALIDATION_ERROR",
+        message: "sortOrder must be one of: asc, desc.",
+      });
+    }
+
     const query: FilterQuery<Feedback> = {};
 
     if (category) {
@@ -195,11 +225,36 @@ async function getFeedbackList(request: Request, response: Response) {
       query.status = status;
     }
 
-    const feedback = await FeedbackModel.find(query).sort({ createdAt: -1 });
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { ai_summary: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    const skip = (page - 1) * limit;
+
+    const [feedback, total] = await Promise.all([
+      FeedbackModel.find(query)
+        .sort({ [sortBy]: sortDirection, createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      FeedbackModel.countDocuments(query),
+    ]);
 
     return response.status(200).json({
       success: true,
       data: feedback,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        sortBy,
+        sortOrder,
+        search,
+      },
       error: null,
       message: "Feedback fetched successfully.",
     });

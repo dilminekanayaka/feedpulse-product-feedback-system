@@ -33,8 +33,8 @@ Content-Type: {{contentType}}
 GET {{baseUrl}}/api/feedback/summary
 Authorization: Bearer {{token}}
 
-### Get all feedback and confirm ai_* fields were saved
-GET {{baseUrl}}/api/feedback
+### Get paginated feedback with search and sorting
+GET {{baseUrl}}/api/feedback?page=1&limit=10&search=dark&sortBy=createdAt&sortOrder=desc
 Authorization: Bearer {{token}}
 
 ### Get one feedback item (admin only)
