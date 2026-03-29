@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 
 import {
   createFeedback,
@@ -10,10 +10,11 @@ import {
   updateFeedbackStatus,
 } from "../controllers/feedback.controller";
 import { requireAdminAuth } from "../middleware/auth.middleware";
+import { feedbackSubmissionRateLimit } from "../middleware/feedback-rate-limit.middleware";
 
 const feedbackRouter = Router();
 
-feedbackRouter.post("/", createFeedback);
+feedbackRouter.post("/", feedbackSubmissionRateLimit, createFeedback);
 feedbackRouter.get("/summary", requireAdminAuth, getFeedbackSummary);
 feedbackRouter.get("/", requireAdminAuth, getFeedbackList);
 feedbackRouter.get("/:id", requireAdminAuth, getFeedbackById);

@@ -1,13 +1,16 @@
-import "./globals.css";
+﻿import "./globals.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 const metadata: Metadata = {
-  title: "FeedPulse",
-  description: "Collect product feedback and route it into FeedPulse.",
+  title: {
+    default: "FeedPulse",
+    template: "%s | FeedPulse",
+  },
+  description: "FeedPulse frontend rebuild in progress.",
 };
 
-function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body>{children}</body>
@@ -16,4 +19,3 @@ function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 export { metadata };
-export default RootLayout;
