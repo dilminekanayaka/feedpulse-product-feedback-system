@@ -55,13 +55,21 @@ button {
   background: none;
 }
 
-.feedback-shell {
+.feedback-shell,
+.login-shell {
   position: relative;
   min-height: 100vh;
   overflow: hidden;
   display: grid;
   place-items: center;
+}
+
+.feedback-shell {
   padding: 28px 16px 36px;
+}
+
+.login-shell {
+  padding: 40px 16px;
 }
 
 .feedback-glow {
@@ -84,13 +92,22 @@ button {
   bottom: -80px;
 }
 
-.feedback-stage {
+.feedback-stage,
+.login-stage {
   position: relative;
   z-index: 1;
-  width: min(100%, 720px);
   display: grid;
   justify-items: center;
+}
+
+.feedback-stage {
+  width: min(100%, 720px);
   gap: 22px;
+}
+
+.login-stage {
+  width: min(100%, 520px);
+  gap: 26px;
 }
 
 .feedback-topbar {
@@ -114,10 +131,10 @@ button {
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
-.feedback-admin-button:hover {
+.feedback-admin-button:hover,
+.login-back-link:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 122, 26, 0.24);
-  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.06);
 }
 
 .feedback-heading-block {
@@ -136,7 +153,9 @@ button {
 
 .feedback-subtitle,
 .feedback-footnote,
-.toast-card p {
+.toast-card p,
+.login-page-subtitle,
+.login-helper-text {
   margin: 0;
   color: var(--text-soft);
   line-height: 1.65;
@@ -147,9 +166,8 @@ button {
   font-size: 1.05rem;
 }
 
-.feedback-card {
-  width: min(100%, 640px);
-  padding: 34px 34px 30px;
+.feedback-card,
+.login-card {
   border-radius: var(--radius-xl);
   border: 1px solid var(--line);
   background: var(--surface);
@@ -158,13 +176,26 @@ button {
     0 1px 0 rgba(255, 255, 255, 0.72) inset;
 }
 
+.feedback-card {
+  width: min(100%, 640px);
+  padding: 34px 34px 30px;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 34px 34px 28px;
+}
+
 .feedback-form,
-.feedback-field {
+.feedback-field,
+.login-form,
+.login-field {
   display: grid;
   gap: 10px;
 }
 
-.feedback-form {
+.feedback-form,
+.login-form {
   gap: 20px;
 }
 
@@ -175,7 +206,8 @@ button {
 }
 
 .feedback-field label,
-.feedback-label-row {
+.feedback-label-row,
+.login-field label {
   font-size: 0.96rem;
   font-weight: 600;
   color: #4b5563;
@@ -209,7 +241,8 @@ button {
 
 .feedback-field input,
 .feedback-field select,
-.feedback-field textarea {
+.feedback-field textarea,
+.login-field input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -220,13 +253,15 @@ button {
 }
 
 .feedback-field input::placeholder,
-.feedback-field textarea::placeholder {
+.feedback-field textarea::placeholder,
+.login-field input::placeholder {
   color: #a0a7b5;
 }
 
 .feedback-field input:focus,
 .feedback-field select:focus,
-.feedback-field textarea:focus {
+.feedback-field textarea:focus,
+.login-field input:focus {
   outline: none;
   border-color: rgba(255, 122, 26, 0.52);
   box-shadow: 0 0 0 4px rgba(255, 122, 26, 0.12);
@@ -242,11 +277,13 @@ button {
   color: var(--danger);
 }
 
-.feedback-submit-button {
+.feedback-submit-button,
+.login-submit-button {
   width: 100%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 15px 20px;
   border-radius: 16px;
   background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
@@ -256,14 +293,74 @@ button {
   transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
 }
 
-.feedback-submit-button:hover {
+.feedback-submit-button:hover,
+.login-submit-button:hover {
   transform: translateY(-1px);
 }
 
-.feedback-submit-button:disabled {
+.feedback-submit-button:disabled,
+.login-submit-button:disabled {
   opacity: 0.7;
   cursor: wait;
   transform: none;
+}
+
+.login-brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.login-brand-mark {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.login-brand-mark span {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, transparent 0 38%, var(--accent) 39% 58%, transparent 59%),
+    linear-gradient(225deg, transparent 0 38%, var(--accent) 39% 58%, transparent 59%);
+  transform: rotate(45deg);
+}
+
+.login-header-block {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.login-page-title {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.login-submit-arrow {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.login-helper-text {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 0.94rem;
+}
+
+.login-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #97a0af;
+  font-weight: 600;
+  transition: transform var(--transition), color var(--transition);
 }
 
 .feedback-footer {
@@ -332,7 +429,8 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .feedback-card {
+  .feedback-card,
+  .login-card {
     padding: 24px 20px 22px;
     width: min(100%, 100%);
   }
