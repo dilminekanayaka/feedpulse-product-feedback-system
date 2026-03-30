@@ -45,11 +45,7 @@ export default function LoginPage() {
     event.preventDefault();
 
     if (!email.trim() || !password.trim()) {
-      setToast({
-        id: "login-empty",
-        tone: "error",
-        message: "Please enter both email and password.",
-      });
+      setToast({ id: "login-empty", tone: "error", message: "Please enter both email and password." });
       return;
     }
 
@@ -71,71 +67,59 @@ export default function LoginPage() {
       saveAdminSession({ token: result.data.token, email: result.data.admin.email });
       router.push("/dashboard");
     } catch (error) {
-      setToast({
-        id: "login-error",
-        tone: "error",
-        message: error instanceof Error ? error.message : "Unable to log in.",
-      });
+      setToast({ id: "login-error", tone: "error", message: error instanceof Error ? error.message : "Unable to log in." });
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <main className="login-shell">
-      <div className="feedback-glow feedback-glow-left" />
-      <div className="feedback-glow feedback-glow-right" />
+    <main className="app-shell auth-shell">
+      <div className="app-glow app-glow-left" />
+      <div className="app-glow app-glow-right" />
 
-      <section className="login-stage">
-        <div className="login-brand-row">
-          <span className="login-brand-mark" aria-hidden="true">
-            <span />
-          </span>
-          <span className="login-brand-name">FeedPulse</span>
+      <section className="page-frame auth-frame auth-frame-tight">
+        <div className="auth-header auth-header-tight">
+          <div className="brand-copy brand-copy-centered">
+            <span className="brand-name">FeedPulse</span>
+            <span className="brand-meta">Admin workspace</span>
+          </div>
         </div>
 
-        <article className="login-card">
-          <div className="login-header-block">
-            <h1 className="login-page-title">Admin Login</h1>
-            <p className="login-page-subtitle">Sign in to manage feedback and insights.</p>
+        <article className="panel auth-panel auth-panel-tight">
+          <div className="panel-header auth-panel-header">
+            <div>
+              <span className="eyebrow">Secure access</span>
+              <h1 className="panel-title panel-title-large">Admin Login</h1>
+              <p className="panel-description">Sign in to manage feedback, triage submissions, and review AI insights.</p>
+            </div>
           </div>
 
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className="login-field">
+          <form className="form-grid" onSubmit={handleSubmit}>
+            <div className="field-group">
               <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="admin@feedpulse.com"
-                autoComplete="email"
-              />
+              <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="admin@feedpulse.com" autoComplete="email" />
             </div>
 
-            <div className="login-field">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter password"
-                autoComplete="current-password"
-              />
+            <div className="field-group">
+              <div className="field-label-row field-label-row-split">
+                <label htmlFor="password">Password</label>
+                <span className="field-helper">Protected access</span>
+              </div>
+              <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter password" autoComplete="current-password" />
             </div>
 
-            <button className="login-submit-button" type="submit" disabled={isSubmitting}>
-              <span className="login-submit-arrow" aria-hidden="true">→</span>
-              <span>{isSubmitting ? "Signing In..." : "Sign In"}</span>
-            </button>
+            <div className="form-actions auth-form-actions">
+              <button className="button button-primary button-large" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Signing In..." : "Sign In"}
+              </button>
+              <p className="support-copy">Use the admin credentials configured in your backend environment.</p>
+            </div>
           </form>
-
-          <p className="login-helper-text">Use the admin credentials configured in your backend environment.</p>
         </article>
 
-        <Link href="/" className="login-back-link">
-          ← Back to Home
+        <Link href="/" className="text-link auth-back-link">
+          Back to Home
         </Link>
       </section>
 

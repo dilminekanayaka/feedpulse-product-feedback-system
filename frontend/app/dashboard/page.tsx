@@ -19,9 +19,11 @@ type FeedbackItem = {
   status: FeedbackStatus;
   submitterName?: string;
   submitterEmail?: string;
+  ai_category?: FeedbackCategory;
   ai_sentiment?: FeedbackSentiment;
   ai_priority?: number;
   ai_summary?: string;
+  ai_tags?: string[];
   createdAt: string;
 };
 
@@ -40,6 +42,17 @@ type FeedbackUpdateResponse = {
   success?: boolean;
   message?: string;
   data?: FeedbackItem;
+};
+
+type SummaryResponse = {
+  success?: boolean;
+  message?: string;
+  data?: {
+    period_days: number;
+    total_feedback: number;
+    summary: string;
+    themes: string[];
+  };
 };
 
 type FiltersState = {
@@ -80,6 +93,12 @@ function getCategoryTone(category: FeedbackCategory) {
   return "muted";
 }
 
+function getStatusTone(status: FeedbackStatus) {
+  if (status === "Resolved") return "positive";
+  if (status === "In Review") return "neutral";
+  return "accent";
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [session, setSession] = useState<AdminSession | null>(null);
@@ -88,6 +107,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const [summary, setSummary] = useState<SummaryResponse["data"] | null>(null);
   const [toast, setToast] = useState<ToastNotice | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -109,6 +130,39 @@ export default function DashboardPage() {
     const timeoutId = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
+
+  async function loadSummary(activeSession: AdminSession, silent = false) {
+    if (!silent) {
+      setSummaryBusy(true);
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/feedback/summary`, {
+        headers: {
+          Authorization: `Bearer ${activeSession.token}`,
+        },
+        cache: "no-store",
+      });
+
+      const result = (await response.json()) as SummaryResponse;
+
+      if (!response.ok || !result.data) {
+        throw new Error(result.message || "Unable to load AI summary.");
+      }
+
+      setSummary(result.data);
+    } catch (error) {
+      if (!silent) {
+        setToast({
+          id: "dashboard-summary-error",
+          tone: "error",
+          message: error instanceof Error ? error.message : "Unable to load AI summary.",
+        });
+      }
+    } finally {
+      setSummaryBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!session) return;
@@ -161,11 +215,7 @@ export default function DashboardPage() {
         setTotalItems(result.meta?.total || 0);
       } catch (error) {
         if (!isMounted) return;
-        setToast({
-          id: "dashboard-load-error",
-          tone: "error",
-          message: error instanceof Error ? error.message : "Unable to load feedback.",
-        });
+        setToast({ id: "dashboard-load-error", tone: "error", message: error instanceof Error ? error.message : "Unable to load feedback." });
       } finally {
         if (!isMounted) return;
         setIsLoading(false);
@@ -174,6 +224,7 @@ export default function DashboardPage() {
     }
 
     loadFeedback();
+    loadSummary(activeSession, true);
 
     return () => {
       isMounted = false;
@@ -182,12 +233,8 @@ export default function DashboardPage() {
 
   const metrics = useMemo(() => {
     const openItems = feedback.filter((item) => item.status !== "Resolved").length;
-    const priorities = feedback
-      .map((item) => item.ai_priority)
-      .filter((value): value is number => typeof value === "number");
-    const avgPriority = priorities.length
-      ? (priorities.reduce((sum, value) => sum + value, 0) / priorities.length).toFixed(1)
-      : "0.0";
+    const priorities = feedback.map((item) => item.ai_priority).filter((value): value is number => typeof value === "number");
+    const avgPriority = priorities.length ? (priorities.reduce((sum, value) => sum + value, 0) / priorities.length).toFixed(1) : "0.0";
 
     const categoryCounts = feedback.reduce<Record<string, number>>((accumulator, item) => {
       accumulator[item.category] = (accumulator[item.category] || 0) + 1;
@@ -197,10 +244,10 @@ export default function DashboardPage() {
     const topCategory = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "-";
 
     return [
-      { label: "Total Feedback", value: totalItems || feedback.length, tone: "blue" },
-      { label: "Open Items", value: openItems, tone: "orange" },
-      { label: "Avg Priority", value: avgPriority, tone: "purple" },
-      { label: "Top Category", value: topCategory, tone: "green" },
+      { label: "Total feedback", value: totalItems || feedback.length, tone: "blue" },
+      { label: "Open items", value: openItems, tone: "accent" },
+      { label: "Avg priority", value: avgPriority, tone: "purple" },
+      { label: "Top category", value: topCategory, tone: "green" },
     ];
   }, [feedback, totalItems]);
 
@@ -233,17 +280,39 @@ export default function DashboardPage() {
       }
 
       setFeedback((current) => current.map((item) => (item._id === feedbackId ? result.data! : item)));
-      setToast({
-        id: `status-${feedbackId}`,
-        tone: "success",
-        message: "Feedback status updated.",
-      });
+      setToast({ id: `status-${feedbackId}`, tone: "success", message: "Feedback status updated." });
     } catch (error) {
-      setToast({
-        id: `status-error-${feedbackId}`,
-        tone: "error",
-        message: error instanceof Error ? error.message : "Unable to update status.",
+      setToast({ id: `status-error-${feedbackId}`, tone: "error", message: error instanceof Error ? error.message : "Unable to update status." });
+    } finally {
+      setActiveItemId(null);
+    }
+  }
+
+  async function handleReanalyze(feedbackId: string) {
+    if (!session) return;
+
+    const activeSession = session;
+    setActiveItemId(feedbackId);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/feedback/${feedbackId}/reanalyze`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${activeSession.token}`,
+        },
       });
+
+      const result = (await response.json()) as FeedbackUpdateResponse;
+
+      if (!response.ok || !result.data) {
+        throw new Error(result.message || "Unable to re-run AI analysis.");
+      }
+
+      setFeedback((current) => current.map((item) => (item._id === feedbackId ? result.data! : item)));
+      setToast({ id: `reanalyze-${feedbackId}`, tone: "success", message: "AI analysis refreshed." });
+      await loadSummary(activeSession, true);
+    } catch (error) {
+      setToast({ id: `reanalyze-error-${feedbackId}`, tone: "error", message: error instanceof Error ? error.message : "Unable to re-run AI analysis." });
     } finally {
       setActiveItemId(null);
     }
@@ -256,84 +325,110 @@ export default function DashboardPage() {
 
   return (
     <main className="dashboard-shell">
-      <div className="feedback-glow feedback-glow-left" />
-      <div className="feedback-glow feedback-glow-right" />
+      <div className="app-glow app-glow-left" />
+      <div className="app-glow app-glow-right" />
 
       <section className="dashboard-stage">
         <header className="dashboard-topbar">
-          <div className="dashboard-brand">
-            <span className="dashboard-brand-mark" aria-hidden="true" />
-            <div className="dashboard-brand-copy">
-              <span className="dashboard-brand-name">FeedPulse</span>
-              <span className="dashboard-brand-meta">Admin</span>
-            </div>
+          <div className="brand-copy brand-copy-standalone">
+            <span className="brand-name">FeedPulse</span>
+            <span className="brand-meta">Admin dashboard</span>
           </div>
 
           <div className="dashboard-topbar-actions">
             <span className="dashboard-user-chip">{session?.email || "Admin"}</span>
-            <button type="button" className="dashboard-logout-button" onClick={handleLogout}>
+            <button type="button" className="button button-secondary dashboard-logout-button" onClick={handleLogout}>
               Logout
             </button>
           </div>
         </header>
 
-        <section className="dashboard-metrics-grid" aria-label="Dashboard metrics">
+        <section className="dashboard-overview-grid" aria-label="Dashboard overview">
           {metrics.map((item) => (
             <article key={item.label} className="dashboard-metric-card">
-              <div className={`dashboard-metric-icon dashboard-metric-icon-${item.tone}`} aria-hidden="true" />
-              <span className="dashboard-metric-label">{item.label}</span>
+              <div className="dashboard-metric-head">
+                <span className={`dashboard-metric-icon dashboard-metric-icon-${item.tone}`} aria-hidden="true" />
+                <span className="dashboard-metric-label">{item.label}</span>
+              </div>
               <strong className="dashboard-metric-value">{item.value}</strong>
             </article>
           ))}
         </section>
 
-        <section className="dashboard-filter-bar" aria-label="Feedback filters">
-          <div className="dashboard-search-field">
-            <input
-              type="search"
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Search by title or summary..."
-            />
+        <section className="panel dashboard-summary-panel">
+          <div className="panel-header dashboard-summary-header">
+            <div>
+              <span className="eyebrow">AI digest</span>
+              <h2 className="panel-title">Last 7 Days AI Summary</h2>
+              <p className="panel-description">Top patterns detected across the most recent feedback submissions.</p>
+            </div>
+            <button
+              type="button"
+              className="button button-secondary button-compact"
+              onClick={() => session && loadSummary(session)}
+              disabled={summaryBusy}
+            >
+              {summaryBusy ? "Refreshing..." : "Refresh Summary"}
+            </button>
           </div>
 
-          <select name="category" value={filters.category} onChange={handleFilterChange}>
-            <option value="">All Categories</option>
-            <option value="Bug">Bug</option>
-            <option value="Feature Request">Feature Request</option>
-            <option value="Improvement">Improvement</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <select name="status" value={filters.status} onChange={handleFilterChange}>
-            <option value="">All Statuses</option>
-            <option value="New">New</option>
-            <option value="In Review">In Review</option>
-            <option value="Resolved">Resolved</option>
-          </select>
-
-          <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange}>
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-            <option value="priority">Highest Priority</option>
-          </select>
+          <div className="dashboard-summary-body">
+            <p className="dashboard-summary-copy">
+              {summary?.summary || "AI summary will appear here once feedback is available for analysis."}
+            </p>
+            <div className="dashboard-theme-list">
+              {(summary?.themes?.length ? summary.themes : ["No themes yet", "Waiting for recent feedback", "Run refresh after new submissions"]).map((theme) => (
+                <span key={theme} className="dashboard-theme-pill">{theme}</span>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <section className="dashboard-list-shell">
-          <div className="dashboard-list-header">
+        <section className="dashboard-toolbar panel" aria-label="Feedback filters">
+          <div className="dashboard-toolbar-search">
+            <input type="search" name="search" value={filters.search} onChange={handleFilterChange} placeholder="Search feedback" aria-label="Search feedback" />
+          </div>
+
+          <div className="select-wrap select-wrap-modern">
+            <select name="category" value={filters.category} onChange={handleFilterChange} aria-label="Filter by category">
+              <option value="">All categories</option>
+              <option value="Bug">Bug</option>
+              <option value="Feature Request">Feature Request</option>
+              <option value="Improvement">Improvement</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div className="select-wrap select-wrap-modern">
+            <select name="status" value={filters.status} onChange={handleFilterChange} aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option value="New">New</option>
+              <option value="In Review">In Review</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+
+          <div className="select-wrap select-wrap-modern">
+            <select name="sortBy" value={filters.sortBy} onChange={handleFilterChange} aria-label="Sort feedback">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="priority">Highest priority</option>
+            </select>
+          </div>
+        </section>
+
+        <section className="panel dashboard-list-panel">
+          <div className="panel-header dashboard-list-header">
             <div>
-              <h1>Feedback Queue</h1>
-              <p>Review incoming feedback, update status, and keep your team aligned.</p>
+              <h1 className="panel-title">Feedback Queue</h1>
+              <p className="panel-description">Review incoming submissions, update status, and keep the product team aligned on what matters most.</p>
             </div>
-            {isRefreshing ? <span className="dashboard-refresh-state">Refreshing...</span> : null}
+            <span className="dashboard-refresh-state">{isRefreshing ? "Refreshing..." : `${totalItems} total items`}</span>
           </div>
 
           {isLoading ? (
             <div className="dashboard-loading-list" aria-hidden="true">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="dashboard-skeleton-row" />
-              ))}
+              {Array.from({ length: 6 }).map((_, index) => <div key={index} className="dashboard-skeleton-row" />)}
             </div>
           ) : feedback.length === 0 ? (
             <div className="dashboard-empty-state">
@@ -348,41 +443,48 @@ export default function DashboardPage() {
                     <div className="dashboard-feedback-title-row">
                       <h2>{item.title}</h2>
                       <div className="dashboard-pill-group">
-                        <span className={`dashboard-pill dashboard-pill-${getCategoryTone(item.category)}`}>
-                          {item.category}
-                        </span>
-                        {item.ai_sentiment ? (
-                          <span className={`dashboard-pill dashboard-pill-${getSentimentTone(item.ai_sentiment)}`}>
-                            {item.ai_sentiment}
-                          </span>
-                        ) : null}
+                        <span className={`dashboard-pill dashboard-pill-${getCategoryTone(item.category)}`}>{item.category}</span>
+                        {item.ai_sentiment ? <span className={`dashboard-pill dashboard-pill-${getSentimentTone(item.ai_sentiment)}`}>{item.ai_sentiment}</span> : null}
+                        <span className={`dashboard-pill dashboard-pill-${getStatusTone(item.status)}`}>{item.status}</span>
                       </div>
                     </div>
 
-                    <p className="dashboard-feedback-summary">{item.ai_summary || item.description}</p>
+                    <div className="dashboard-ai-block">
+                      <p className="dashboard-ai-summary">{item.ai_summary || item.description}</p>
+                      {item.ai_tags && item.ai_tags.length > 0 ? (
+                        <div className="dashboard-ai-tags">
+                          {item.ai_tags.map((tag) => (
+                            <span key={`${item._id}-${tag}`} className="dashboard-ai-tag">{tag}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
 
                     <div className="dashboard-feedback-meta">
-                      <span>{item.ai_priority ? `P${item.ai_priority}` : "No priority"}</span>
-                      <span>{item.status}</span>
-                      <span>{formatDate(item.createdAt)}</span>
-                      <span>{item.submitterName || item.submitterEmail || "Anonymous"}</span>
+                      <span className="dashboard-meta-chip dashboard-meta-chip-priority">{item.ai_priority ? `Priority P${item.ai_priority}` : "No priority"}</span>
+                      {item.ai_category ? <span className="dashboard-meta-chip">AI: {item.ai_category}</span> : null}
+                      <span className="dashboard-meta-chip">{formatDate(item.createdAt)}</span>
+                      <span className="dashboard-meta-chip">{item.submitterName || item.submitterEmail || "Anonymous"}</span>
                     </div>
                   </div>
 
                   <div className="dashboard-feedback-actions">
-                    <select
-                      value={item.status}
-                      onChange={(event) => handleStatusChange(item._id, event.target.value as FeedbackStatus)}
+                    <div className="select-wrap select-wrap-modern select-wrap-compact">
+                      <select value={item.status} onChange={(event) => handleStatusChange(item._id, event.target.value as FeedbackStatus)} disabled={activeItemId === item._id} aria-label={`Update status for ${item.title}`}>
+                        {statusOptions.map((status) => <option key={status} value={status}>{status}</option>) }
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="button button-secondary button-compact dashboard-reanalyze-button"
+                      onClick={() => handleReanalyze(item._id)}
                       disabled={activeItemId === item._id}
                     >
-                      {statusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+                      {activeItemId === item._id ? "Running..." : "Re-analyze"}
+                    </button>
 
-                    <Link href={`/dashboard?feedback=${item._id}`} className="dashboard-view-link">
+                    <Link href={`/dashboard?feedback=${item._id}`} className="button button-secondary dashboard-view-link dashboard-view-link-modern">
                       View
                     </Link>
                   </div>
@@ -392,24 +494,12 @@ export default function DashboardPage() {
           )}
 
           <footer className="dashboard-pagination">
-            <span>
-              Showing {feedback.length === 0 ? 0 : (page - 1) * 10 + 1}-{(page - 1) * 10 + feedback.length} of {totalItems}
-            </span>
+            <span>Showing {feedback.length === 0 ? 0 : (page - 1) * 10 + 1}-{(page - 1) * 10 + feedback.length} of {totalItems}</span>
 
             <div className="dashboard-pagination-controls">
-              <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
-                Prev
-              </button>
-              <span>
-                {page} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                disabled={page >= totalPages}
-              >
-                Next
-              </button>
+              <button type="button" className="button button-secondary button-compact" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>Prev</button>
+              <span>{page} / {totalPages}</span>
+              <button type="button" className="button button-secondary button-compact" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page >= totalPages}>Next</button>
             </div>
           </footer>
         </section>
