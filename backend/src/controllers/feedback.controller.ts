@@ -1,4 +1,4 @@
-import { FilterQuery, isValidObjectId } from "mongoose";
+﻿import { FilterQuery, isValidObjectId } from "mongoose";
 import { Request, Response } from "express";
 
 import {
@@ -8,9 +8,10 @@ import {
   feedbackStatusValues,
 } from "../models/feedback.model";
 import {
-  analyzeFeedbackWithGemini,
-  summarizeFeedbackThemesWithGemini,
-} from "../services/gemini.service";
+  generateFeedbackSummary,
+  getLatestWeeklyFeedbackSummary,
+} from "../services/feedback-summary.service";
+import { analyzeFeedbackWithGemini } from "../services/gemini.service";
 
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedStatuses = new Set<string>(feedbackStatusValues);
@@ -116,41 +117,15 @@ async function createFeedback(request: Request, response: Response) {
   }
 }
 
-async function getFeedbackSummary(request: Request, response: Response) {
+async function getFeedbackSummary(_request: Request, response: Response) {
   try {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentFeedback = await FeedbackModel.find({
-      createdAt: { $gte: sevenDaysAgo },
-    })
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    if (recentFeedback.length === 0) {
-      return response.status(200).json({
-        success: true,
-        data: {
-          period_days: 7,
-          total_feedback: 0,
-          summary: "No feedback was submitted in the last 7 days.",
-          themes: [],
-        },
-        error: null,
-        message: "Feedback summary generated successfully.",
-      });
-    }
-
-    const entries = recentFeedback.map(
-      (item, index) =>
-        `${index + 1}. Title: ${item.title}\nDescription: ${item.description}\nCategory: ${item.category}\nStatus: ${item.status}`,
-    );
-
-    const summary = await summarizeFeedbackThemesWithGemini(entries);
+    const summary = await generateFeedbackSummary(7, 50);
 
     return response.status(200).json({
       success: true,
       data: {
-        period_days: 7,
-        total_feedback: recentFeedback.length,
+        period_days: summary.periodDays,
+        total_feedback: summary.totalFeedback,
         summary: summary.summary,
         themes: summary.themes,
       },
@@ -165,6 +140,37 @@ async function getFeedbackSummary(request: Request, response: Response) {
       data: null,
       error: "INTERNAL_SERVER_ERROR",
       message: "Something went wrong while generating feedback summary.",
+    });
+  }
+}
+
+async function getLatestWeeklySummary(_request: Request, response: Response) {
+  try {
+    const snapshot = await getLatestWeeklyFeedbackSummary();
+
+    if (!snapshot) {
+      return response.status(404).json({
+        success: false,
+        data: null,
+        error: "NOT_FOUND",
+        message: "No weekly feedback summary has been generated yet.",
+      });
+    }
+
+    return response.status(200).json({
+      success: true,
+      data: snapshot,
+      error: null,
+      message: "Latest weekly feedback summary fetched successfully.",
+    });
+  } catch (error) {
+    console.error("Failed to fetch latest weekly feedback summary.", error);
+
+    return response.status(500).json({
+      success: false,
+      data: null,
+      error: "INTERNAL_SERVER_ERROR",
+      message: "Something went wrong while fetching the weekly feedback summary.",
     });
   }
 }
@@ -469,6 +475,7 @@ export {
   getFeedbackById,
   getFeedbackList,
   getFeedbackSummary,
+  getLatestWeeklySummary,
   reanalyzeFeedback,
   updateFeedbackStatus,
 };

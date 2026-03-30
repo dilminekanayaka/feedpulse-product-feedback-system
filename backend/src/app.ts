@@ -18,8 +18,13 @@ app.use(
 app.use(express.json());
 
 app.get("/", (_request, response) => {
-  response.json({
+  response.status(200).json({
     success: true,
+    data: {
+      service: "feedpulse-backend",
+      status: "ok",
+    },
+    error: null,
     message: "FeedPulse backend is running.",
   });
 });

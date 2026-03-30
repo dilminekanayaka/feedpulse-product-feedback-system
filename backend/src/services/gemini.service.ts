@@ -1,11 +1,12 @@
-import { GoogleGenAI } from "@google/genai";
+﻿import { GoogleGenAI } from "@google/genai";
 
+import { env } from "../config/env";
 import {
   feedbackCategoryValues,
   feedbackSentimentValues,
 } from "../models/feedback.model";
 
-const ai = new GoogleGenAI({});
+const ai = new GoogleGenAI({ apiKey: env.geminiApiKey });
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedSentiments = new Set<string>(feedbackSentimentValues);
 const geminiModel = "gemini-3-flash-preview";

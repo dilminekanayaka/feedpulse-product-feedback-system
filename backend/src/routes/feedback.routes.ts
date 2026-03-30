@@ -6,6 +6,7 @@ import {
   getFeedbackById,
   getFeedbackList,
   getFeedbackSummary,
+  getLatestWeeklySummary,
   reanalyzeFeedback,
   updateFeedbackStatus,
 } from "../controllers/feedback.controller";
@@ -15,6 +16,7 @@ import { feedbackSubmissionRateLimit } from "../middleware/feedback-rate-limit.m
 const feedbackRouter = Router();
 
 feedbackRouter.post("/", feedbackSubmissionRateLimit, createFeedback);
+feedbackRouter.get("/summary/weekly/latest", requireAdminAuth, getLatestWeeklySummary);
 feedbackRouter.get("/summary", requireAdminAuth, getFeedbackSummary);
 feedbackRouter.get("/", requireAdminAuth, getFeedbackList);
 feedbackRouter.get("/:id", requireAdminAuth, getFeedbackById);
