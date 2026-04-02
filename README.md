@@ -1,64 +1,63 @@
-﻿# FeedPulse Product Feedback System
+﻿# FeedPulse Product Feedback System 🚀
 
-FeedPulse is a full-stack product feedback platform built for the Software Engineer Intern assignment.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Express](https://img.shields.io/badge/Express-4-lightgrey?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-8-green?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
+[![Gemini](https://img.shields.io/badge/Google_Gemini-AI-brightgreen?style=for-the-badge&logo=google-gemini)](https://ai.google.dev/)
 
-Users can submit feedback through a public form, the backend stores it in MongoDB, Gemini analyzes it automatically, and admins can review everything from a protected dashboard.
+**FeedPulse** is a professional, full-stack product feedback platform designed to streamline how organizations collect, analyze, and manage user feedback. By leveraging the power of **Google Gemini AI**, FeedPulse automatically categorizes and summarizes incoming feedback, allowing teams to focus on what matters most—building better products.
 
-## What Is Built
+---
 
-### Public experience
+## 🌟 Key Features
 
-- Public feedback form with client-side validation
-- Title, description, category, name, and email fields
-- Description character counter
-- Success and error states after submission
-- Submissions sent to the backend API
+### 📨 Public Experience
+A seamless and intuitive feedback submission process for your users.
+- **Responsive Feedback Form**: Built with Next.js for a fast, modern user experience.
+- **Real-time Validation**: Client-side validation ensures high-quality submissions.
+- **Character Counter**: Helps users stay concise while providing enough detail.
+- **Success/Error States**: Immediate visual feedback after submission.
 
-### Backend API
+![Public Feedback Form](docs/screenshots/publicFeedbackForm.png)
 
-- Express + TypeScript backend
-- MongoDB + Mongoose connection
-- Feedback schema with validation and indexes
-- `POST /api/feedback`
-- `GET /api/feedback`
-- `GET /api/feedback/:id`
-- `PATCH /api/feedback/:id`
-- `DELETE /api/feedback/:id`
-- `GET /api/feedback/summary`
-- `POST /api/feedback/:id/reanalyze`
-- `POST /api/auth/login`
+### 🤖 AI Features (Powered by Gemini)
+Intelligence is at the core of FeedPulse. Every submission is automatically processed by Google's Gemini AI.
+- **Automated Analysis**: Instant extraction of category, sentiment, priority, and key tags.
+- **Smart Summarization**: Generates a concise summary for quick scanning by admins.
+- **Theme Extraction**: Endpoints available for 7-day theme analysis across all feedback.
+- **Manual Re-analysis**: Trigger AI refinement directly from the admin dashboard.
+- **Graceful Fallback**: Robust error handling ensures system stability even if AI services are unavailable.
 
-### AI features
+### 🔐 Admin Features
+A comprehensive dashboard for product managers and developers to oversee user sentiment.
+- **Protected Dashboard**: Secure admin access via JWT authentication.
+- **Feedback Management**: Paginated list view with powerful search and filter capabilities.
+- **Advanced Sorting**: Sort by date, priority, sentiment, or title to find critical issues.
+- **Inline Updates**: Change feedback status (Pending, In Progress, Resolved) instantly.
+- **AI Re-trigger**: Refresh AI analysis if the original submission was unclear.
+- **Quick Deletion**: Easily remove spam or irrelevant feedback.
 
-- Gemini analysis on feedback submission
-- AI category, sentiment, priority, summary, and tags saved to MongoDB
-- Graceful fallback when Gemini fails
-- 7-day summary endpoint for recent feedback themes
-- Manual AI re-trigger for any feedback item
+![Admin Dashboard](docs/screenshots/AdminDashboard.png)
 
-### Admin experience
+---
 
-- Admin login page
-- Protected dashboard using JWT token stored in local storage
-- Feedback list with pagination
-- Search by title and AI summary
-- Filter by category and status
-- Sort by date, priority, sentiment, or title
-- Inline status update
-- Inline AI re-analysis
-- Real delete action from dashboard
-- Better loading and empty states
+## 🛠️ Tech Stack
 
-## Tech Stack
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| **Backend** | Node.js, Express, TypeScript |
+| **Database** | MongoDB, Mongoose |
+| **AI/ML** | Google Gemini API (`@google/genai`) |
+| **Auth** | JSON Web Tokens (JWT) |
+| **Testing** | Jest |
+| **DevOps** | Docker |
 
-- Frontend: Next.js 15 + React 19 + TypeScript
-- Backend: Node.js + Express + TypeScript
-- Database: MongoDB + Mongoose
-- AI: Google Gemini via `@google/genai`
-- Auth: JWT
-- Testing: Jest + ts-jest
+---
 
-## Project Structure
+## 📂 Project Structure
 
 ```text
 feedpulse-product-feedback-system/
@@ -87,177 +86,94 @@ feedpulse-product-feedback-system/
 ├── docs/
 │   └── screenshots/
 ├── README.md
+├── docker-compose.yml 
 └── .gitignore
 ```
+---
 
-## Screenshots
+## 🚀 How To Run Locally
 
-### Public feedback form
+### 1. Prerequisites
+- **Node.js** (v18+)
+- **MongoDB** (Local instance or Atlas)
+- **Gemini API Key** (Get one at [aistudio.google.com](https://aistudio.google.com/))
 
-![Public feedback form](docs/screenshots/public-feedback-form.png)
+### 2. Setup Environment Variables
+Clone the repository and create `.env` files for both frontend and backend.
 
-### Admin login page
-
-![Admin login page](docs/screenshots/admin-login-page.png)
-
-## Environment Variables
-
-### Backend: `backend/.env`
-
+**Backend (`backend/.env`):**
 ```env
 PORT=4000
 MONGO_URI=your_mongodb_connection_string
 GEMINI_API_KEY=your_gemini_api_key
-JWT_SECRET=your_long_random_secret
+JWT_SECRET=your_secret_key
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin123
 CLIENT_URL=http://localhost:3000
 ```
 
-### Frontend: `frontend/.env.local`
-
+**Frontend (`frontend/.env.local`):**
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
-## How To Run Locally
+### 3. Installation & Execution
+Launch the backend and frontend in separate terminals:
 
-### 1. Clone and open the project
-
-```powershell
-git clone <your-repo-url>
-cd F:\GITHUB\feedpulse-product-feedback-system
-```
-
-### 2. Create env files
-
-```powershell
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\.env.local.example frontend\.env.local
-```
-
-Then fill in the real values.
-
-### 3. Install backend dependencies
-
-```powershell
+```bash
+# Terminal 1: Backend
 cd backend
 npm install
-```
+npm run dev
 
-### 4. Install frontend dependencies
-
-Open a second terminal:
-
-```powershell
-cd F:\GITHUB\feedpulse-product-feedback-system\frontend
+# Terminal 2: Frontend
+cd frontend
 npm install
+npm start
 ```
 
-### 5. Start backend
+The application will be available at `http://localhost:3000`.
 
-```powershell
-cd F:\GITHUB\feedpulse-product-feedback-system\backend
-npm run dev
+---
+
+## 🐳 How To Run With Docker
+
+FeedPulse is fully containerized for easy deployment and local testing.
+
+### 1. Configure Docker Env
+Create a `.env` file in the root directory (copy from `.env.docker.example`):
+```bash
+cp .env.docker.example .env
 ```
+Fill in your `GEMINI_API_KEY`.
 
-Expected:
-
-- backend runs on `http://localhost:4000`
-- MongoDB connects successfully
-
-### 6. Start frontend
-
-In another terminal:
-
-```powershell
-cd F:\GITHUB\feedpulse-product-feedback-system\frontend
-npm run dev
+### 2. Start the System
+Run the following command to build and start all services (Frontend, Backend, MongoDB):
+```bash
+docker compose up --build
 ```
+Everything will be up and running:
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:4000`
 
-Expected:
+---
 
-- frontend runs on `http://localhost:3000`
+## 🛡️ Admin Credentials
+The default admin account is configured via environment variables. By default:
+- **Email**: `admin@example.com`
+- **Password**: `admin123`
 
-### 7. Open the app
+---
 
-- Public form: [http://localhost:3000](http://localhost:3000)
-- Admin login: [http://localhost:3000/login](http://localhost:3000/login)
-- Dashboard: [http://localhost:3000/dashboard](http://localhost:3000/dashboard)
+## 📈 Roadmap & Future Improvements
+- [ ] **Advanced Analytics**: Dashboard charts for feedback trends.
+- [ ] **Rate Limiting**: Enhanced security for public submissions.
+- [ ] **Email Notifications**: Alerts for admins when high-priority feedback arrives.
+- [ ] **Integration Tests**: Comprehensive E2E testing for the entire flow.
 
-## Admin Login
+---
 
-Use the credentials from `backend/.env`.
+## 📄 License
+Distributed under the MIT License. See `LICENSE` for more information.
 
-Example:
-
-```env
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=admin123
-```
-
-## Backend Testing
-
-### Manual API checks
-
-Use:
-
-[backend/feedback.http](backend/feedback.http)
-
-It includes requests for:
-
-- public feedback submission
-- admin login
-- summary endpoint
-- list endpoint
-- single item fetch
-- reanalyze endpoint
-- status update
-- delete
-
-### Automated tests
-
-Run:
-
-```powershell
-cd F:\GITHUB\feedpulse-product-feedback-system\backend
-npm test
-```
-
-Current test coverage includes:
-
-- Gemini service helper normalization
-- JWT auth middleware unauthorized case
-- feedback controller validation
-- paginated feedback list behavior
-
-## Current Status
-
-Implemented well:
-
-- backend CRUD
-- Gemini integration
-- summary + reanalyze endpoints
-- admin auth middleware
-- public form
-- admin login page
-- protected dashboard
-- backend tests
-
-Still good next steps if more time is available:
-
-- dashboard screenshots
-- stronger token persistence strategy
-- backend integration tests with mocked DB/API layers
-- deploy frontend and backend
-- Docker setup
-
-## What I Would Build Next
-
-If I had more time, I would add:
-
-- dashboard charts and aggregate metrics
-- rate limiting on public submissions
-- integration tests for API endpoints
-- deployment to Vercel + Render
-- Docker Compose for one-command local startup
+---
