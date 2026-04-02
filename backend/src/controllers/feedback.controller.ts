@@ -1,4 +1,4 @@
-﻿import { FilterQuery, isValidObjectId } from "mongoose";
+import { FilterQuery, isValidObjectId } from "mongoose";
 import { Request, Response } from "express";
 
 import {
@@ -18,6 +18,8 @@ const allowedStatuses = new Set<string>(feedbackStatusValues);
 const allowedSortFields = new Set(["createdAt", "ai_priority", "ai_sentiment", "title"]);
 const allowedSortOrders = new Set(["asc", "desc"]);
 
+type FeedbackDocument = InstanceType<typeof FeedbackModel>;
+
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -27,7 +29,7 @@ function parsePositiveInteger(value: unknown, fallback: number) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-async function applyGeminiAnalysis(feedback: InstanceType<typeof FeedbackModel>) {
+async function applyGeminiAnalysis(feedback: FeedbackDocument) {
   const analysis = await analyzeFeedbackWithGemini(feedback.title, feedback.description);
 
   feedback.ai_category = analysis.category;
@@ -36,6 +38,18 @@ async function applyGeminiAnalysis(feedback: InstanceType<typeof FeedbackModel>)
   feedback.ai_summary = analysis.summary;
   feedback.ai_tags = analysis.tags;
   feedback.ai_processed = true;
+
+  await feedback.save();
+  return feedback;
+}
+
+async function applyGeminiFallback(feedback: FeedbackDocument) {
+  feedback.ai_category = feedback.ai_category ?? "Other";
+  feedback.ai_sentiment = feedback.ai_sentiment ?? "Neutral";
+  feedback.ai_priority = typeof feedback.ai_priority === "number" ? feedback.ai_priority : 1;
+  feedback.ai_summary = feedback.ai_summary || "AI analysis is temporarily unavailable for this submission.";
+  feedback.ai_tags = Array.isArray(feedback.ai_tags) ? feedback.ai_tags : [];
+  feedback.ai_processed = false;
 
   await feedback.save();
   return feedback;
@@ -97,6 +111,7 @@ async function createFeedback(request: Request, response: Response) {
       await applyGeminiAnalysis(feedback);
     } catch (aiError) {
       console.error("Gemini analysis failed.", aiError);
+      await applyGeminiFallback(feedback);
     }
 
     return response.status(201).json({
@@ -342,14 +357,26 @@ async function reanalyzeFeedback(request: Request, response: Response) {
       });
     }
 
-    const updatedFeedback = await applyGeminiAnalysis(feedback);
+    try {
+      const updatedFeedback = await applyGeminiAnalysis(feedback);
 
-    return response.status(200).json({
-      success: true,
-      data: updatedFeedback,
-      error: null,
-      message: "Feedback AI analysis re-triggered successfully.",
-    });
+      return response.status(200).json({
+        success: true,
+        data: updatedFeedback,
+        error: null,
+        message: "Feedback AI analysis refreshed successfully.",
+      });
+    } catch (aiError) {
+      console.error("Gemini reanalysis failed.", aiError);
+      const fallbackFeedback = await applyGeminiFallback(feedback);
+
+      return response.status(200).json({
+        success: true,
+        data: fallbackFeedback,
+        error: null,
+        message: "AI was temporarily unavailable, so fallback analysis values were kept for this feedback.",
+      });
+    }
   } catch (error) {
     console.error("Failed to reanalyze feedback.", error);
 

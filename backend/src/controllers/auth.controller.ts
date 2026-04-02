@@ -1,7 +1,9 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
 import { env } from "../config/env";
+import { UserModel } from "../models/user.model";
+import { verifyPassword } from "../utils/password";
 
 function sanitizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -21,7 +23,9 @@ async function loginAdmin(request: Request, response: Response) {
       });
     }
 
-    if (email !== env.adminEmail.toLowerCase() || password !== env.adminPassword) {
+    const adminUser = await UserModel.findOne({ email, role: "admin", isActive: true });
+
+    if (!adminUser || !verifyPassword(password, adminUser.passwordHash)) {
       return response.status(401).json({
         success: false,
         data: null,
@@ -32,8 +36,9 @@ async function loginAdmin(request: Request, response: Response) {
 
     const token = jwt.sign(
       {
-        email: env.adminEmail,
-        role: "admin",
+        sub: String(adminUser._id),
+        email: adminUser.email,
+        role: adminUser.role,
       },
       env.jwtSecret,
       { expiresIn: "1d" },
@@ -44,8 +49,8 @@ async function loginAdmin(request: Request, response: Response) {
       data: {
         token,
         admin: {
-          email: env.adminEmail,
-          role: "admin",
+          email: adminUser.email,
+          role: adminUser.role,
         },
       },
       error: null,

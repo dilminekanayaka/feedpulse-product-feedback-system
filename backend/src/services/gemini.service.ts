@@ -1,4 +1,4 @@
-﻿import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 import { env } from "../config/env";
 import {
@@ -9,7 +9,7 @@ import {
 const ai = new GoogleGenAI({ apiKey: env.geminiApiKey });
 const allowedCategories = new Set<string>(feedbackCategoryValues);
 const allowedSentiments = new Set<string>(feedbackSentimentValues);
-const geminiModel = "gemini-3-flash-preview";
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 type GeminiFeedbackAnalysis = {
   category: string;
@@ -30,6 +30,13 @@ function extractJsonBlock(rawText: string) {
   if (trimmed.startsWith("```")) {
     const withoutFenceHeader = trimmed.replace(/^```(?:json)?\s*/i, "");
     return withoutFenceHeader.replace(/\s*```$/, "").trim();
+  }
+
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1);
   }
 
   return trimmed;
@@ -82,6 +89,21 @@ function normalizeThemeSummary(input: unknown): GeminiThemeSummary {
   };
 }
 
+async function generateJsonResponse(prompt: string) {
+  const response = await ai.models.generateContent({
+    model: geminiModel,
+    contents: prompt,
+  });
+
+  const rawText = response.text;
+
+  if (!rawText) {
+    throw new Error("Gemini returned an empty response.");
+  }
+
+  return JSON.parse(extractJsonBlock(rawText));
+}
+
 async function analyzeFeedbackWithGemini(title: string, description: string) {
   const prompt = [
     "Analyze this product feedback and return ONLY valid JSON.",
@@ -97,18 +119,7 @@ async function analyzeFeedbackWithGemini(title: string, description: string) {
     `Description: ${description}`,
   ].join("\n");
 
-  const response = await ai.models.generateContent({
-    model: geminiModel,
-    contents: prompt,
-  });
-
-  const rawText = response.text;
-
-  if (!rawText) {
-    throw new Error("Gemini returned an empty response.");
-  }
-
-  const parsed = JSON.parse(extractJsonBlock(rawText));
+  const parsed = await generateJsonResponse(prompt);
   return normalizeGeminiAnalysis(parsed);
 }
 
@@ -123,18 +134,7 @@ async function summarizeFeedbackThemesWithGemini(entries: string[]) {
     ...entries,
   ].join("\n");
 
-  const response = await ai.models.generateContent({
-    model: geminiModel,
-    contents: prompt,
-  });
-
-  const rawText = response.text;
-
-  if (!rawText) {
-    throw new Error("Gemini returned an empty summary response.");
-  }
-
-  const parsed = JSON.parse(extractJsonBlock(rawText));
+  const parsed = await generateJsonResponse(prompt);
   return normalizeThemeSummary(parsed);
 }
 

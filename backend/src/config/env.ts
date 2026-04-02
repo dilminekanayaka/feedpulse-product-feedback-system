@@ -20,14 +20,6 @@ if (!jwtSecret) {
   throw new Error("JWT_SECRET is required in backend/.env");
 }
 
-if (!adminEmail) {
-  throw new Error("ADMIN_EMAIL is required in backend/.env");
-}
-
-if (!adminPassword) {
-  throw new Error("ADMIN_PASSWORD is required in backend/.env");
-}
-
 function parseBoolean(value: string | undefined, fallback: boolean) {
   if (value === undefined) {
     return fallback;

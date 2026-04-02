@@ -1,7 +1,13 @@
-import { NextFunction, Request, Response } from "express";
+﻿import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
 import { env } from "../config/env";
+
+type AdminJwtPayload = {
+  sub?: string;
+  email?: string;
+  role?: string;
+};
 
 function requireAdminAuth(request: Request, response: Response, next: NextFunction) {
   const authorizationHeader = request.headers.authorization;
@@ -18,9 +24,19 @@ function requireAdminAuth(request: Request, response: Response, next: NextFuncti
   const token = authorizationHeader.replace("Bearer ", "").trim();
 
   try {
-    jwt.verify(token, env.jwtSecret);
+    const payload = jwt.verify(token, env.jwtSecret) as AdminJwtPayload;
+
+    if (payload.role !== "admin") {
+      return response.status(401).json({
+        success: false,
+        data: null,
+        error: "UNAUTHORIZED",
+        message: "Admin access is required.",
+      });
+    }
+
     return next();
-  } catch (error) {
+  } catch (_error) {
     return response.status(401).json({
       success: false,
       data: null,

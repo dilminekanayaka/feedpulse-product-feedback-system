@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
@@ -60,10 +60,7 @@ export default function HomePage() {
   const descriptionLength = useMemo(() => form.description.trim().length, [form.description]);
 
   useEffect(() => {
-    if (!toast) {
-      return;
-    }
-
+    if (!toast) return;
     const timeoutId = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
@@ -114,22 +111,23 @@ export default function HomePage() {
       <div className="app-glow app-glow-right" />
 
       <section className="page-frame feedback-frame">
-        <header className="topbar topbar-compact feedback-topbar-row">
+        <header className="topbar topbar-compact feedback-topbar-row page-header">
           <div className="brand-copy brand-copy-standalone">
             <span className="brand-name">FeedPulse</span>
-            <span className="brand-meta">AI feedback system</span>
           </div>
 
-          <Link href="/login" className="button button-secondary topbar-link-button">
-            Admin Login
-          </Link>
+          <div className="topbar-actions">
+            <Link href="/login" className="button button-secondary topbar-link-button">
+              Admin Login
+            </Link>
+          </div>
         </header>
 
         <section className="hero-block hero-block-centered feedback-hero-block">
           <span className="eyebrow">Customer feedback portal</span>
-          <h1 className="hero-title">Share feedback that helps us build better.</h1>
+          <h1 className="hero-title">Share feedback that helps us build with clarity.</h1>
           <p className="hero-subtitle">
-            Report bugs, suggest features, or share improvements. Every submission goes directly into the FeedPulse review workflow.
+            Report bugs, request features, or suggest improvements. Every submission flows directly into the FeedPulse review queue.
           </p>
         </section>
 
@@ -143,7 +141,7 @@ export default function HomePage() {
 
           <form className="form-grid" onSubmit={handleSubmit} noValidate>
             <div className="field-group">
-              <div className="field-label-row">
+              <div className="field-label-row field-label-row-compact">
                 <label htmlFor="title">Title</label>
                 <span className="field-required">Required</span>
               </div>
@@ -152,8 +150,8 @@ export default function HomePage() {
             </div>
 
             <div className="field-group">
-              <div className="field-label-row field-label-row-split">
-                <div>
+              <div className="field-label-row field-label-row-split field-label-row-compact">
+                <div className="field-label-inline">
                   <label htmlFor="description">Description</label>
                   <span className="field-required">Required</span>
                 </div>
@@ -192,11 +190,6 @@ export default function HomePage() {
               <button className="button button-primary button-large" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Submit Feedback"}
               </button>
-              <div className="trust-strip" aria-label="Submission safeguards">
-                <span>Private review workflow</span>
-                <span>Rate-limited protection</span>
-                <span>Accessible on all devices</span>
-              </div>
             </div>
           </form>
         </article>
@@ -206,3 +199,10 @@ export default function HomePage() {
     </main>
   );
 }
+
+
+
+
+
+
+
